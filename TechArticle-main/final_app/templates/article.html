@@ -29,10 +29,15 @@
                 </div>
                 <div class="d-flex justify-content-end">
                     {% if article.user.id == request.session.loginID %}
-                    <div class="ml-auto "><a href="/delete/{{article.id}}" class="btn btn-secondary m-1 p-2"
-                            id="del_update">delete</a></div>
-                    <div class="ml-auto "><a href="/editarticle/{{article.id}}" class="btn btn-secondary m-1 p-2"
-                            id="del_update">update</a></div>
+                    <div class="ml-auto ">
+                        <form action="/delete/{{article.id}}" method="POST">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary m-1 p-2" id="del_update">delete</button>
+                        </form>
+                    </div>
+                    <div class="ml-auto ">
+                        <a href="/editarticle/{{article.id}}" class="btn btn-secondary m-1 p-2" id="del_update">update</a>
+                    </div>
                     {% endif %}
                 </div>
             </div>

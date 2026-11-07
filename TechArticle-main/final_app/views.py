@@ -1,10 +1,16 @@
-from django.shortcuts import render,redirect
+from django.shortcuts import get_object_or_404, render,redirect
 from django.contrib import messages
 from .models import *
 import bcrypt
 from django.urls import reverse
 
-
+def login_needed(view):
+    def wrapper(request, *args, **kwargs):
+        if 'loginID' not in request.session:
+            messages.error(request, "يجب عليك تسجيل الدخول اولا")
+            return redirect('/index')
+        return view(request, *args, **kwargs)
+    return wrapper
 
 # Create your views here.
 def towelcome(request):
@@ -36,6 +42,7 @@ def register(request):
             newUser.save()
 
             #(save user id in session to access to user ) 
+            request.session.cycle_key()
             request.session['loginID']=newUser.id
         return redirect("/dashboard")
     else:
@@ -51,9 +58,10 @@ def login(request):
                 messages.error(request,value)
             return redirect("/index")
         #fetching for the id to redirect user to success page.
-        request.session['loginID'] = Users.objects.get(Email=request.POST['Email']).id
+        request.session.cycle_key()
+        request.session['loginID'] = Users.objects.get(Email__iexact=request.POST['Email']).id
         return redirect('/dashboard')
-
+    return redirect('/index')
 
 def dashboard(request):
     try:
@@ -70,12 +78,13 @@ def dashboard(request):
     return render(request,"dashboard.html",context)
 
 def logout (request):
-    del request.session['loginID']
+    request.session.pop('loginID', None)
     return redirect('/index')
-
+@login_needed
 def adding(request):
     return render(request,"create.html")
-    
+
+@login_needed   
 def add_article(request):
     if request.method == 'POST':
         errors =Articles.objects.validator(request.POST)
@@ -103,24 +112,31 @@ def add_article(request):
             return redirect('/dashboard')
     return redirect('/dashboard')
 
-
+@login_needed
 def show_article(request,id):
+    # give 404 if the id is wrong or not exist
+    article = get_object_or_404(Articles, id=id)
     context = {
-        "article": Articles.objects.get(id=id),
+        "article": article,
         "user": Users.objects.get(id=request.session['loginID']),
-        'comment': Comment.objects.all(),
     }
     return render(request, 'article.html', context)
+
+@login_needed
 def comment(request):
     if request.method == 'POST':
-        comment = Comment.objects.create(comment = request.POST['comment'], user_id = Users.objects.get(id = request.session['loginID']), message_id = Articles.objects.get(id = request.POST['msg_id']))
-        comment.save()
-    # return redirect("/dashboard")
-    return redirect(f"/show_article/{comment.message_id.id}")
+        article = get_object_or_404(Articles, id=request.POST['msg_id'])
+        comment = Comment.objects.create(comment = request.POST['comment'], user_id = Users.objects.get(id = request.session['loginID']), message_id = article)
+        # return redirect("/dashboard")
+        return redirect(f"/show_article/{article.id}")
+    return redirect("/dashboard")
 
+@login_needed
 def edit(request,id):#for edit btn 
-    article = Articles.objects.get(id=id)
-    
+    article = get_object_or_404(Articles, id=id)
+    if article.user_id != request.session['loginID']:
+        messages.error(request, "You are not allowed to edit this article.")
+        return redirect(f'/show_article/{article.id}')
     context={
         "article":article,
     }
@@ -140,10 +156,14 @@ def edit(request,id):#for edit btn
     return render(request,'edit.html',context)
 
 
-
+@login_needed
 def delete(request,id):
-    article= Articles.objects.get(id=id)
-    article.delete()
+    article= get_object_or_404(Articles, id=id)
+    if article.user_id != request.session['loginID']:
+        messages.error(request, "You are not allowed to delete this article.")
+        return redirect(f'/show_article/{article.id}')
+    if request.method == "POST":
+        article.delete()
     return redirect("/dashboard")
 
 def search(request):
@@ -155,11 +175,12 @@ def search(request):
             'results': results,
         }
         return render(request,'search.html',context)
+    return redirect('/dashboard')
 
 def tag(request,id):
     
     context = {
-        "tag": Tags.objects.get(id=id),
+        "tag": get_object_or_404(Tags, id=id),
         "articles": Articles.objects.exclude(),
         
     }
@@ -177,31 +198,15 @@ def tag(request,id):
 #     return render(request,'tags.html')
 #----------------likes-------------------------
 
+@login_needed
 def like_article(request):
-    # user=request.user
-    user_id=request.session['loginID']
     if request.method == "POST":
-        article_id=request.POST.get('article_id')
-        print(article_id)
-        article_obj=Articles.objects.get(id=article_id)
-        print(article_obj)
-        
-        user = Users.objects.get(id=user_id)
-        print(user_id)
-        if user in article_obj.liked.all():#means the user liked the article already then remove from many to many
-            article_obj.liked.remove(user_id)
-            print("liked")
+        article = get_object_or_404(Articles, id=request.POST.get('article_id'))
+        user = Users.objects.get(id=request.session['loginID'])
+        if user in article.liked.all():#means the user liked the article already then remove from many to many
+            article.liked.remove(user)
         else:
-            article_obj.liked.add(user_id)
-            print("dislike")
-        like,created=Like.objects.get_or_create(user=user ,article_id=article_id)
+            article.liked.add(user)
+        return redirect(f"/show_article/{ article.id}")
 
-        print(like)
-        print(created)
-        if not created:
-            if like.value =='Like':
-                like.value='Unlike'
-            else:
-                like.value='Like'
-        like.save()
-    return redirect(f"/show_article/{ article_obj.id}")
+    return redirect("/dashboard")

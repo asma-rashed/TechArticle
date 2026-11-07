@@ -20,11 +20,13 @@ class UserManager(models.Manager):
             if len(postData['Password']) < 8:
                 errors['Password'] = "Password should be at least 8 characters"
             if not passregex.match(postData['Password']):
-                errors['pw_match'] = "Passwords must have mor than 1 char "
+                errors['pw_match'] = "Password should contain only letters and numbers"
             if postData['Password'] != postData['Password2']:
                 errors['pw_match'] = "Passwords don't match "
 
-            
+            #an email can't be used more than once in the database
+            if Users.objects.filter(Email__iexact=postData['Email']).exists():
+                errors['Email'] = "Email already exists"
             #checking email: 
             if not EMAIL_REGEX.match(postData['Email']):    # test whether a field matches the pattern            
                 errors['Email'] = "Invalid email address!"
@@ -34,7 +36,7 @@ class UserManager(models.Manager):
     def validatorLo(self,postData):
             errors = {}
             #fetching for the email in db.
-            user = Users.objects.filter(Email=postData['Email'])
+            user = Users.objects.filter(Email__iexact=postData['Email'])
 
             #checking email (if user=none -> error , if user exist -> else)
             if not(user):
@@ -78,7 +80,7 @@ class Articles(models.Model):
         return str(self.title)
     @property
     def num_likes(self):
-        return self.liked.all().cont()
+        return self.liked.all().count()
 
 
 
