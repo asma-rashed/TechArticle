@@ -28,7 +28,7 @@ Read an article, add comments and like it. The author also sees **update** and *
 ![Article page](screenshots/article.png)
 
 ### Create an article
-Write a title and text and add comma-separated tags.
+Write a title and text and add space-separated tags.
 
 ![Create an article](screenshots/create-aricle.png)
 
