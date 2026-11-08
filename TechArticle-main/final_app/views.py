@@ -111,6 +111,7 @@ def add_article(request):
             messages.success(request,"the Article successfully added!")
             return redirect('/dashboard')
     return redirect('/dashboard')
+   
 
 @login_needed
 def show_article(request,id):
