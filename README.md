@@ -30,11 +30,8 @@ Read an article, add comments and like it. The author also sees **update** and *
 ### Create an article
 Write a title and text and add comma-separated tags.
 
-![Create an article](screenshots/create-article.png)
+![Create an article](screenshots/create-aricle.png)
 
-![Dashboard](screenshots/dashboard.png)
-![Article page](screenshots/article.png)
-![Create article](screenshots/create.png)
 
 ## What I improved
 
